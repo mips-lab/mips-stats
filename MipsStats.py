@@ -8,8 +8,11 @@ import math
 events_url = "http://www.mips-lab.net/export_events_to_csv"
 events_type = ['ouvertures', 'craft-stickers-flocage', 'formation-python',
     'formation-decoupeuse-laser', 'formation-imprimante-3d']
-listegraph1 = ['ouvertures', 'formation-imprimante-3d', 'formation-decoupeuse-laser',
-    'craft-stickers-flocage', 'formation-python']
+listegraph1 = ['ouvertures', 'formation-imprimante-3d',
+    'formation-decoupeuse-laser', 'craft-stickers-flocage', 'formation-python']
+listegraph2 = ['ouvertures_duration', 'formation-imprimante-3d_duration',
+    'formation-decoupeuse-laser_duration', 'craft-stickers-flocage_duration',
+    'formation-python_duration']
 
 ### Début de la fonction pour les statistiques d'ouverture :
 # Prend en argument le fichier CSV du plone (url)
@@ -114,8 +117,8 @@ def graph(nom, stats, liste):
                 '" style="text-anchor: start">')
         q = int(stats[liste[i]])
         qp = round(((q*100) / somme), 2)
-        n = liste[i].replace('-',' ')
-        f.write(str(n) + ' : ' + str(qp) + '% (' + str(q) + ' heures)')
+        n = liste[i].replace('-',' ').replace('_',' ')
+        f.write(str(n) + ' : ' + str(qp) + '% (' + str(q) + ')')
         f.write('</text>\n')
         lastx = nextx
         lasty = nexty
@@ -125,5 +128,6 @@ def graph(nom, stats, liste):
 ### Fin de la fonction pour le graphique
 
 if __name__ == '__main__':
-    statistiques = stats_ouverture(events_url, events_type)
-    graph("Les ouvertures du MIPS",statistiques,listegraph1)
+    statistiques_events = stats_ouverture(events_url, events_type)
+    graph("Les ouvertures du MIPS - par nombre",statistiques_events,listegraph1)
+    graph("Les ouvertures du MIPS - par heures",statistiques_events,listegraph2)

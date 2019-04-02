@@ -3,13 +3,12 @@ import csv
 import urllib.request
 import sqlite3
 import io
-import math
 from datetime import datetime
 import pygal
 import pprint
 
 URL = "http://www.mips-lab.net/export_events_to_csv"
-YEAR = 2017
+YEAR = 2018
 
 
 def stats_ouverture(url=None, year=None):

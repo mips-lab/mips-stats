@@ -4,24 +4,17 @@ import urllib.request
 import sqlite3
 import io
 import math
+from datetime import datetime
 
-events_url = "http://www.mips-lab.net/export_events_to_csv"
-events_type = ['ouvertures', 'craft-stickers-flocage', 'formation-python',
-    'formation-decoupeuse-laser', 'formation-imprimante-3d']
-listegraph1 = ['ouvertures', 'formation-imprimante-3d',
-    'formation-decoupeuse-laser', 'craft-stickers-flocage', 'formation-python']
-listegraph2 = ['ouvertures_duration', 'formation-imprimante-3d_duration',
-    'formation-decoupeuse-laser_duration', 'craft-stickers-flocage_duration',
-    'formation-python_duration']
+URL = "http://www.mips-lab.net/export_events_to_csv"
+YEAR = 2018
 
-### Début de la fonction pour les statistiques d'ouverture :
-# Prend en argument le fichier CSV du plone (url)
-# et une liste des types d'événements.
-# Il en ressort un dict avec les nombres de créneaux et les durées de ces
-# créneaux d'ouverture.
-###
-
-def stats_ouverture(events_url, events_type):
+def stats_ouverture(events_url, year=None):
+    '''
+    Cette fonction extrait les statistiques depuis le fichier CSV
+    '''
+    if year is None:
+        year = YEAR
     csv_events = urllib.request.urlopen(events_url).read().decode('UTF-8')
     csv_events = io.StringIO(csv_events)
     events = csv.reader(csv_events, delimiter=";")
@@ -36,39 +29,34 @@ def stats_ouverture(events_url, events_type):
             duration real)
             ''')
     for row in events:
-        if len(row) != 0:
-            sql = [row[0], row[1], row[2], row[3], row[4], row[5]]
+        if len(row) != 0 and row[0] != "cat":
+            start = datetime.strptime(row[3], "%d/%m/%Y %H:%M")
+            end = datetime.strptime(row[4], "%d/%m/%Y %H:%M")
+            sql = [row[0], row[1], row[2], start.isoformat(), end.isoformat(), row[5]]
             c.execute('''INSERT INTO events
                     (cat, title, who, start, end, duration)
                     VALUES (?, ?, ?, ?, ?, ?)''', sql)
             conn.commit()
+    c.execute("SELECT cat FROM events")
+    list_events = c.fetchall()
+    categories = []
+    for item in list_events:
+        categories.append(item[0])
+    events_type = list(set(categories))
     events_stats = {}
     for events in events_type:
-        c.execute('''SELECT COUNT (*) FROM events WHERE cat = ?''', (events,))
-        events_stats[events] = (c.fetchone()[0])
-    c.execute('''SELECT duration FROM events''')
+        c.execute("SELECT COUNT (*) FROM events WHERE cat = ? AND start >= ? AND end <= ?", (events, "{}-01-01".format(year), "{}-12-31".format(year)))
+        events_stats[events] = c.fetchone()[0]
     for events in events_type:
-        total = 0
-        c.execute('''SELECT duration FROM events WHERE cat = ?''', (events,))
-        for row in c:
-            dur = row[0].replace(',','.')
-            try:
-                h = float(dur)
-            except:
-                h = 0
-                pass
-            total = total + h
-            duration = events + '_duration'
-            events_stats[duration] = total
+        c.execute("SELECT SUM(duration) FROM events WHERE cat = ? AND start >= ? AND end <= ?", (events, "{}-01-01".format(year), "{}-12-31".format(year)))
+        duration = events + '_duration'
+        try:
+            events_stats[duration] = float(c.fetchone()[0])
+        except TypeError:
+            events_stats[duration] = 0
     conn.close()
     return(events_stats)
-### Fin de la fonction pour les statistiques d'ouverture
 
-### Début de la fonction pour le graphique
-# Prend en argument le nom du grah, le dict de statistiques et
-# la liste des choses à grapher.
-# Cette page m'a bien aidé : http://wiki.scribus.net/canvas/Making_a_Pie_Chart
-###
 
 def graph(nom, stats, liste):
     angle_full = []
